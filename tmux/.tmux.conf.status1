@@ -1,0 +1,7 @@
+set -g status-left  $STATUS_LEFT_SIMPLE
+set -g status-right $STATUS_RIGHT_SIMPLE
+bind-key l refresh-client \; source ~/.tmux.conf.status2
+
+# vim syntax sugars{{{1
+# vim:set ft=tmux ts=2 sw=2 sts=2 foldmethod=marker:
+# }}}
