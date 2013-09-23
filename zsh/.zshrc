@@ -388,6 +388,8 @@ fi
 # Depends: Hexdump stuffs
     alias host2color="echo $[`hostname | str2num -n5` % 8]"
     alias user2color="echo $[`whoami | str2num -n5` % 8]"
+    MYHOSTCOLOR="$((`host2color`+2))"
+    export MYHOSTCOLOR
     local AUTOHOSTCOLOR=`host2color`
     local HOSTCOLOR=$'%{\e[$[32+AUTOHOSTCOLOR]m%}'
     local AUTOUSERCOLOR=`user2color`
