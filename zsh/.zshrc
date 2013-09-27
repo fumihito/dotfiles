@@ -297,7 +297,7 @@ zstyle ':completion:*' group-name ''
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/pkg/lib
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/ports/lib
 
-export EDITOR=vi
+export EDITOR=vim
 export VISUAL=${EDITOR}
 
 
