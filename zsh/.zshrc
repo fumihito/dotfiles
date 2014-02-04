@@ -205,8 +205,8 @@ if is-at-least 4.3.10; then
 zstyle ':vcs_info:git*+set-message:*' hooks git-st
     zstyle ':vcs_info:bzr:*' check-for-changes true
     zstyle ':vcs_info:git:*' check-for-changes true
-    zstyle ':vcs_info:git:*' stagedstr   "%K{blue}%F{white}{!}" #%c
-    zstyle ':vcs_info:git:*' unstagedstr "%K{yellow}%F{black}{+}"  #%u
+    zstyle ':vcs_info:git:*' stagedstr   "%B%K{blue}%F{white}{!}%b" #%c
+    zstyle ':vcs_info:git:*' unstagedstr "%B%K{yellow}%F{black}{+}%b"  #%u
     zstyle ':vcs_info:git:*' formats       '%c%u%K{black}%F{white} %s::%r/%S %K{white}%F{black}[%b]%m%f%k'
     zstyle ':vcs_info:git:*' actionformats '%c%u%K{black}%F{white} %s::%r/%S %K{white}%F{black}[%b](->%a) %m%f%k'
 function _update_vcs_info_msg() {
@@ -423,8 +423,7 @@ fi
     
     #PROMPT="${USER_STR}@${HOST_STR}"$'$LIGHT_GRAY [%!] %(?.$LIGHT_BLUE.$RED)%t $LIGHT_GRAY'" %1(v|%F{blue}%1v%f|)"$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
     RPROMPT='${vcs_info_msg_0_}'
-    #RPROMPT=%1v
-    PROMPT="${USER_STR}@${HOST_STR} %(?.$LIGHT_BLUE.$RED){$?}"$'$LIGHT_GRAY [%!] $BLUE %D{%Y-%m-%d %R(%Z)} $LIGHT_GRAY'""$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
+    PROMPT="${USER_STR}@${HOST_STR} %(?.$LIGHT_BLUE.$RED){$?}"$'$LIGHT_GRAY [%!] %F{cyan}{$LANG}%f$BLUE %D{%Y-%m-%d %R(%Z)} $LIGHT_GRAY'""$'%F{green}%K{black}%U%~%u%f%k \n$GREEN%(!.#.$) $DEFAULT'
 #}}}
 
 ### VTE_CJK_WIDTH (for SSH sessions)
