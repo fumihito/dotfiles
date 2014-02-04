@@ -6,6 +6,7 @@ case $- in
       *) return;;
 esac
 
+typeset -U PATH
 path=(
     $HOME/bin $HOME/sbin
     $HOME/pkg/bin $HOME/pkg/sbin
@@ -48,8 +49,8 @@ setopt multios magic_equal_subst mark_dirs
 setopt numeric_glob_sort
 setopt no_beep no_clobber no_flow_control no_tify no_list_beep
 setopt nopromptcr noautoremoveslash
-setopt prompt_subst pushd_ignore_dups pushd_to_home printeightbit
-setopt print_eight_bit print_exit_value
+setopt prompt_subst pushd_ignore_dups pushd_to_home
+setopt print_eight_bit
 setopt rm_star_silent
 setopt sh_word_split sun_keyboard_hack share_history
 
@@ -89,6 +90,7 @@ alias xo='xdg-open'
 alias py='python'
 alias time='/usr/bin/time'
 alias taskshell='ZDOTDIR=~/.task zsh'
+alias ssv='ss --options --extended --memory --processes --info'
 
 # Care for Vim/vi
 alias vi="vim -u .vimcprc"
@@ -98,9 +100,10 @@ function expandurl() { wget -S $1 2>&1 | grep ^Location; }
 
 function temp() {
     # you can set "$_WORKDIR", it is overridable.
+    ARG="$1"
     TODAY=${TODAY:-`/bin/date '+%Y/%m%d'`}
     _WORKDIR=${_WORKDIR:-"${HOME}/work"}
-    TMP=${TMP:-"${_WORKDIR}/${TODAY}"}
+    TMP="${_WORKDIR}/${ARG}/${TODAY}"
     echo $TMP
     if [ ! -d "${TMP}" ] ; then
         mkdir -pv "${TMP}"
@@ -140,7 +143,6 @@ function genpass(){
 }
 
 # color ls (for gnuls, POSIX ls)
-    setopt prompt_subst
 LS_COLORS="no=00:fi=00:di=01;34:ln=01;36:pi=40;33:so=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;3:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.mpg=01;35:*.mpeg=01;35:*.avi=01;35:*.fli=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.ogg=01;35:*.mp3=01;35:*.wav=01;35:"
     export LS_COLORS
 
@@ -186,25 +188,27 @@ fi
     local RED=$'%{\e[0;31;1m%}'
     local DEFAULT=$'%{\e[0;m%}'
 
-setopt PROMPT_SUBST
 bindkey -e # Emacs like Keybind
 #bindkey -v # vi like Keybind
 
 ## VCS support
+setopt PROMPT_SUBST
 autoload -Uz vcs_info
 autoload -Uz is-at-least
 zstyle ':vcs_info:*' enable git svn hg bzr
-zstyle ':vcs_info:*' formats '(%s)-[%b]'
-zstyle ':vcs_info:*' actionformats '(%s)-[%b|%a]'
-zstyle ':vcs_info:(svn|bzr):*' branchformat '%b:r%r'
+zstyle ':vcs_info:*' formats       '%F{white}%K{black}%s::%r/%S %b%f%k'
+zstyle ':vcs_info:*' actionformats '%F{white}%K{black}%s::%r/%S %b(->%a)%f%k'
+zstyle ':vcs_info:(svn|bzr):*' branchformat '%K{white}%F{black}[%b:r%r]%f%k'
 zstyle ':vcs_info:bzr:*' use-simple true
 
 if is-at-least 4.3.10; then
+zstyle ':vcs_info:git*+set-message:*' hooks git-st
+    zstyle ':vcs_info:bzr:*' check-for-changes true
     zstyle ':vcs_info:git:*' check-for-changes true
-    zstyle ':vcs_info:git:*' stagedstr "??"
-    zstyle ':vcs_info:git:*' unstagedstr "++"
-    zstyle ':vcs_info:git:*' formats '(%s)-[%b] {%c%u}'
-    zstyle ':vcs_info:git:*' actionformats '(%s)-[%b|%a] {%c%u}'
+    zstyle ':vcs_info:git:*' stagedstr   "%K{blue}%F{white}{!}" #%c
+    zstyle ':vcs_info:git:*' unstagedstr "%K{yellow}%F{black}{+}"  #%u
+    zstyle ':vcs_info:git:*' formats       '%c%u%K{black}%F{white} %s::%r/%S %K{white}%F{black}[%b]%m%f%k'
+    zstyle ':vcs_info:git:*' actionformats '%c%u%K{black}%F{white} %s::%r/%S %K{white}%F{black}[%b](->%a) %m%f%k'
 function _update_vcs_info_msg() {
     psvar=()
     LANG=C vcs_info
@@ -417,7 +421,10 @@ fi
     #  # RPROMPT='[%~]'
     #  # PROMPT=$'%n@%m %(!.#.$) '
     
-    PROMPT="${USER_STR}@${HOST_STR}"$'$LIGHT_GRAY [%!] %(?.$LIGHT_BLUE.$RED)%t $LIGHT_GRAY'" %1(v|%F{blue}%1v%f|)"$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
+    #PROMPT="${USER_STR}@${HOST_STR}"$'$LIGHT_GRAY [%!] %(?.$LIGHT_BLUE.$RED)%t $LIGHT_GRAY'" %1(v|%F{blue}%1v%f|)"$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
+    RPROMPT='${vcs_info_msg_0_}'
+    #RPROMPT=%1v
+    PROMPT="${USER_STR}@${HOST_STR} %(?.$LIGHT_BLUE.$RED){$?}"$'$LIGHT_GRAY [%!] $BLUE %D{%Y-%m-%d %R(%Z)} $LIGHT_GRAY'""$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
 #}}}
 
 ### VTE_CJK_WIDTH (for SSH sessions)
