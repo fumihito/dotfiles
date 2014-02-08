@@ -196,19 +196,19 @@ setopt PROMPT_SUBST
 autoload -Uz vcs_info
 autoload -Uz is-at-least
 zstyle ':vcs_info:*' enable git svn hg bzr
-zstyle ':vcs_info:*' formats       '%F{white}%K{black}%s::%r/%S %b%f%k'
-zstyle ':vcs_info:*' actionformats '%F{white}%K{black}%s::%r/%S %b(->%a)%f%k'
-zstyle ':vcs_info:(svn|bzr):*' branchformat '%K{white}%F{black}[%b:r%r]%f%k'
+zstyle ':vcs_info:*' formats       '%F{white}%K{black} %s:%r/%S %b%f%k'
+zstyle ':vcs_info:*' actionformats '%F{white}%K{black} %s:%r/%S %b(->%a)%f%k'
+zstyle ':vcs_info:(svn|bzr):*' branchformat '%K{blue}%F{white} [%b:r%r] %f%k'
 zstyle ':vcs_info:bzr:*' use-simple true
 
 if is-at-least 4.3.10; then
 zstyle ':vcs_info:git*+set-message:*' hooks git-st
     zstyle ':vcs_info:bzr:*' check-for-changes true
     zstyle ':vcs_info:git:*' check-for-changes true
-    zstyle ':vcs_info:git:*' stagedstr   "%B%K{blue}%F{white}{!}%b" #%c
-    zstyle ':vcs_info:git:*' unstagedstr "%B%K{yellow}%F{black}{+}%b"  #%u
-    zstyle ':vcs_info:git:*' formats       '%c%u%K{black}%F{white} %s:%r %K{white}%F{black}[%b]%m%f%k'
-    zstyle ':vcs_info:git:*' actionformats '%c%u%K{black}%F{white} %s:%r %K{white}%F{black}[%b](->%a) %m%f%k'
+    zstyle ':vcs_info:git:*' stagedstr   "%B%K{yellow}%F{black} + %b" #%c
+    zstyle ':vcs_info:git:*' unstagedstr "%B%K{red}%F{white} ? %b"  #%u
+    zstyle ':vcs_info:git:*' formats       '%K{black}%F{white} %s:%r %K{white}%F{black}%f%k%K{blue}%F{white}[ %b ]%f%k%m%c%u'
+    zstyle ':vcs_info:git:*' actionformats '%K{black}%F{white} %s:%r %K{white}%F{black}%f%k%K{magenta}%F{white}[ %b ]%f%k(->%a)%m%c%u'
 function _update_vcs_info_msg() {
     psvar=()
     LANG=C vcs_info
@@ -420,10 +420,8 @@ fi
     #  # PROMPT=$'$LIGHT_GRAY%n$DEFAULT@$LIGHT_BLUE%m$DEFAULT %(!.#.$) '
     #  # RPROMPT='[%~]'
     #  # PROMPT=$'%n@%m %(!.#.$) '
-    
-    #PROMPT="${USER_STR}@${HOST_STR}"$'$LIGHT_GRAY [%!] %(?.$LIGHT_BLUE.$RED)%t $LIGHT_GRAY'" %1(v|%F{blue}%1v%f|)"$'$GREEN %U%~%u \n$GREEN%(!.#.$) $DEFAULT'
-    RPROMPT='${vcs_info_msg_0_}'
-    PROMPT="${USER_STR}@${HOST_STR} %(?.$LIGHT_BLUE.$RED){$?}"$'$LIGHT_GRAY [%!] %F{cyan}{$LANG}%f$BLUE %D{%Y-%m-%d %R(%Z)} $LIGHT_GRAY'""$'%F{green}%K{black}%U%~%u%f%k \n$GREEN%(!.#.$) $DEFAULT'
+    RPROMPT=[$LIGHT_GRAY%F{green}%K{black}%U%~%u%f%k]  
+    PROMPT="%K{black}${USER_STR}@${HOST_STR}%F{green}(%l)%f%k %(?.$LIGHT_BLUE.$RED)%?"$'%b %F{white}{$LANG}%f%k%F{green} %D{%m-%d %R(%Z)} %f ${vcs_info_msg_0_}%f%k\n$GREEN%(!.#.$) $DEFAULT'
 #}}}
 
 ### VTE_CJK_WIDTH (for SSH sessions)
