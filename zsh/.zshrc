@@ -10,6 +10,7 @@ typeset -U PATH
 path=(
     $HOME/bin $HOME/sbin
     $HOME/pkg/bin $HOME/pkg/sbin
+    $HOME/.local/bin 
     /usr/local/bin /usr/local/sbin
 #   /usr/pkg/bin /usr/pkg/sbin
     /bin /sbin
@@ -37,22 +38,21 @@ fi
 # [ Set shell options ]
 ###
 setopt always_last_prompt auto_list auto_menu auto_name_dirs
-setopt auto_param_keys auto_pushd auto_remove_slash auto_param_slash
+setopt auto_param_keys auto_pushd auto_param_slash
 setopt cdable_vars correct complete_in_word complete_aliases
 setopt long_list_jobs
 setopt extended_glob extended_history equals
 setopt hist_ignore_dups hist_verify
 setopt ignore_eof
 setopt list_types listpacked
-setopt long_list_jobs
 setopt multios magic_equal_subst mark_dirs
 setopt numeric_glob_sort
-setopt no_beep no_clobber no_flow_control no_tify no_list_beep
+setopt no_beep no_clobber no_flow_control no_notify no_list_beep
 setopt nopromptcr noautoremoveslash
 setopt prompt_subst pushd_ignore_dups pushd_to_home
 setopt print_eight_bit
 setopt rm_star_silent
-setopt sh_word_split sun_keyboard_hack share_history
+setopt sh_word_split share_history
 
 autoload -Uz is-at-least
 autoload -Uz add-zsh-hook
@@ -194,7 +194,6 @@ bindkey -e # Emacs like Keybind
 ## VCS support
 setopt PROMPT_SUBST
 autoload -Uz vcs_info
-autoload -Uz is-at-least
 zstyle ':vcs_info:*' enable git svn hg bzr
 zstyle ':vcs_info:*' formats       '%F{white}%K{black} %s:%r/%S %b%f%k'
 zstyle ':vcs_info:*' actionformats '%F{white}%K{black} %s:%r/%S %b(->%a)%f%k'
@@ -268,7 +267,6 @@ zstyle ':completion:*:corrections' format $'%{\e[1;33m%}%d (errors: %e)%{\e[0m%}
 zstyle ':completion:*:functions' ignored-patterns '_*'
 zstyle ':completion:*:rm:*' ignore-line yes
 zstyle ':completion:*' list-colors "$LS_COLORS"
-zstyle ':completion:*' group-name
 zstyle ':completion:*' file-sort name
 zstyle ':completion:*' menu select=long
 zstyle ':completion:*:*:-subscript-:*' tag-order indexes parameters
@@ -281,10 +279,6 @@ zstyle ':completion:*' squeeze-slashes 'yes'
 zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Z} r:|[-_.]=**'
 zstyle ':completion:*:sudo:*' command-path /usr/local/sbin /usr/local/bin \
     /usr/sbin /usr/bin /sbin /bin /usr/X11R6/bin
-
-# # be verbose, i.e. show descriptions
-zstyle ':completion:*' verbose yes
-zstyle ':completion:*:descriptions' format '%U%B%d%b%u'
 
 # group by tag names
 zstyle ':completion:*' group-name ''
@@ -380,8 +374,8 @@ if [ -x /usr/bin/dircolors ]; then
     #alias vdir='vdir --color=auto'
 
     alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
+    alias fgrep='grep -F --color=auto'
+    alias egrep='grep -E --color=auto'
 fi
 
 
@@ -429,9 +423,6 @@ VTE_CJK_WIDTH_PROFILE=/etc/profile.d/vte_cjk_width.sh
 if [ -f ${VTE_CJK_WIDTH_PROFILE} ]; then
     source ${VTE_CJK_WIDTH_PROFILE}
 fi
-## easy autoload source
-
-source ~/.*.autoload_source
 
 ##### Starting ZSH #####
 ## Normal interactive shell {{{
@@ -447,5 +438,22 @@ source ~/.*.autoload_source
     echo "  $(uptime 2>/dev/null)"
 # }}}
 
+
+## tmux window rename
+_tmux_rename_preexec() {
+  [[ -z "$TMUX" ]] && return
+  local cmd="${1%% *}"
+  case "$cmd" in
+    claude|codex) tmux rename-window "$cmd" ;;
+  esac
+}
+
+_tmux_autorename_precmd() {
+  [[ -z "$TMUX" ]] && return
+  tmux set-window-option automatic-rename on 2>/dev/null
+}
+
+add-zsh-hook preexec _tmux_rename_preexec
+add-zsh-hook precmd  _tmux_autorename_precmd
 
 # vim:set foldmethod=marker:
