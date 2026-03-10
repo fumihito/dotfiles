@@ -37,13 +37,13 @@ fi
 ###
 # [ Set shell options ]
 ###
-setopt always_last_prompt auto_list auto_menu auto_name_dirs
-setopt auto_param_keys auto_pushd auto_param_slash
+setopt always_last_prompt always_to_end
+setopt auto_list auto_menu auto_name_dirs auto_param_keys auto_pushd auto_param_slash 
 setopt cdable_vars correct complete_in_word complete_aliases
 setopt long_list_jobs
 setopt extended_glob extended_history equals
-setopt hist_ignore_dups hist_verify
-setopt ignore_eof
+setopt hist_ignore_dups hist_verify hist_reduce_blanks
+setopt ignore_eof inc_append_history
 setopt list_types listpacked
 setopt multios magic_equal_subst mark_dirs
 setopt numeric_glob_sort
@@ -53,6 +53,7 @@ setopt prompt_subst pushd_ignore_dups pushd_to_home
 setopt print_eight_bit
 setopt rm_star_silent
 setopt sh_word_split share_history
+setopt transient_rprompt
 
 autoload -Uz is-at-least
 autoload -Uz add-zsh-hook
@@ -415,7 +416,7 @@ fi
     #  # RPROMPT='[%~]'
     #  # PROMPT=$'%n@%m %(!.#.$) '
     RPROMPT=[$LIGHT_GRAY%F{green}%K{black}%U%~%u%f%k]  
-    PROMPT="%K{black}${USER_STR}@${HOST_STR}%F{green}(%l)%f%k %(?.$LIGHT_BLUE.$RED)%?"$'%b %F{white}{$LANG}%f%k%F{green} %D{%m-%d %R(%Z)} %f ${vcs_info_msg_0_}%f%k\n$GREEN%(!.#.$) $DEFAULT'
+    PROMPT="%K{black}${USER_STR}@${HOST_STR}%F{green}(%l)%f%k %(?.$LIGHT_BLUE.$RED)%?"$'%b %F{grey}{$LANG}%f%k%F{cyan} %D{%m-%d %R(%Z)}%f $(ssh_agent_prompt)$(tmux_attachable_prompt)$(wsl_prompt)${vcs_info_msg_0_}%f%k\n$GREEN%(!.#.$) $DEFAULT'
 #}}}
 
 ### VTE_CJK_WIDTH (for SSH sessions)
@@ -424,20 +425,50 @@ if [ -f ${VTE_CJK_WIDTH_PROFILE} ]; then
     source ${VTE_CJK_WIDTH_PROFILE}
 fi
 
-##### Starting ZSH #####
-## Normal interactive shell {{{
-    ## echo system information
-    if [ -x /bin/uname ]; then
-        CODE=`(lsb_release -d | cut -f2) 2> /dev/null`
-        echo "I am $(hostname) ( $(uname -s),$(uname -m) ) . ${CODE}"
-    else
-        echo This box is $(hostname)
-    fi
+## ssh-agent existence
 
-    echo "   zsh version: $ZSH_VERSION"
-    echo "  $(uptime 2>/dev/null)"
-# }}}
+function ssh_agent_prompt() {
+  if [[ -z "$SSH_AUTH_SOCK" ]]; then
+    echo "%F{red}%K{black}[ssh-agent:no]%f"
+    return
+  fi
 
+  ssh-add -l >/dev/null 2>&1
+  local ssh_agent_status=$?
+
+  case $ssh_agent_status in
+    0)
+      echo "%F{green}%K{black}[ssh-agent:ready]%f"
+      ;;
+    1)
+      echo "%F{yellow}%K{black}[ssh-agent:nokey]%f"
+      ;;
+    *)
+      echo "%F{red}%K{black}[ssh-agent:no]%f"
+      ;;
+  esac
+}
+
+## tmux a awareness
+function tmux_attachable_prompt() {
+  if [[ -n "$TMUX" ]]; then
+    echo "%F{green}[in-tmux]%f"
+    return
+  fi
+
+  if command -v tmux >/dev/null 2>&1 && tmux ls >/dev/null 2>&1; then
+    echo "%F{yellow}[tmux session exists]%f"
+  else
+    echo "%F{red}[no tmux]%f"
+  fi
+}
+
+## wsl detection (easy, and heuristic)
+function wsl_prompt() {
+  if [[ -e /proc/sys/fs/binfmt_misc/WSLInterop ]]; then
+    echo "%F{magenta}(wsl)%f"
+  fi
+}
 
 ## tmux window rename
 _tmux_rename_preexec() {
@@ -455,5 +486,19 @@ _tmux_autorename_precmd() {
 
 add-zsh-hook preexec _tmux_rename_preexec
 add-zsh-hook precmd  _tmux_autorename_precmd
+
+##### Starting ZSH #####
+## Normal interactive shell {{{
+    ## echo system information
+    if [ -x /bin/uname ]; then
+        CODE=`(lsb_release -d | cut -f2) 2> /dev/null`
+        echo "I am $(hostname) ( $(uname -s),$(uname -m) ) . ${CODE}"
+    else
+        echo This box is $(hostname)
+    fi
+
+    echo "   zsh version: $ZSH_VERSION"
+    echo "  $(uptime 2>/dev/null)"
+# }}}
 
 # vim:set foldmethod=marker:
