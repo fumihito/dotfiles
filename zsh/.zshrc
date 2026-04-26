@@ -383,41 +383,141 @@ fi
 #
 
 ## build up prompt{{{
-# Variables: user/host colors (you can edit below)
-# Depends: Hexdump stuffs
-    alias host2color="echo $[`hostname | str2num -n5` % 8]"
-    alias user2color="echo $[`whoami | str2num -n5` % 8]"
-    MYHOSTCOLOR="$((`host2color`+2))"
-    export MYHOSTCOLOR
-    local AUTOHOSTCOLOR=`host2color`
-    local HOSTCOLOR=$'%{\e[$[32+AUTOHOSTCOLOR]m%}'
-    local AUTOUSERCOLOR=`user2color`
-    local USERCOLOR=$'%{\e[$[32+AUTOUSERCOLOR]m%}'
-    local ROOTCOLOR=${RED}
-    # fixed variables.
-    #  (*Please* do not edit these strings without your conviction)
-    
-    # ----- User -----
-           local USER_STR="${USERCOLOR}%n"
-           local HOST_STR="${HOSTCOLOR}%m"
-    # ----- root -----
-    # // if you are root,set to LANG=C / RED strings
-    case ${UID} in
-        0)
-            eng
-            local USER_STR="${ROOTCOLOR}%U%n%u"
-            local HOST_STR="${ROOTCOLOR}%U%m%u"
-                ;;
-        esac
-    
-    ## prompt: old zsh compatible setting collections:
-    #  # RPROMPT='[$GREEN%~$DEFAULT]'
-    #  # PROMPT=$'$LIGHT_GRAY%n$DEFAULT@$LIGHT_BLUE%m$DEFAULT %(!.#.$) '
-    #  # RPROMPT='[%~]'
-    #  # PROMPT=$'%n@%m %(!.#.$) '
-    RPROMPT=[$LIGHT_GRAY%F{green}%K{black}%U%~%u%f%k]  
-    PROMPT="%K{black}${USER_STR}@${HOST_STR}%F{green}(%l)%f%k %(?.$LIGHT_BLUE.$RED)%?"$'%b %F{grey}{$LANG}%f%k%F{cyan} %D{%m-%d %R(%Z)}%f $(ssh_agent_prompt)$(tmux_attachable_prompt)$(wsl_prompt)${vcs_info_msg_0_}%f%k\n$GREEN%(!.#.$) $DEFAULT'
-#}}}
+# ---- host-based safe prompt colors ---------------------------------
+
+# first 8 chars will be consumed for key selection
+: ${HOST_COLOR_KEYLEN:=8}
+
+# key string from hostname
+_host_color_key() {
+  emulate -L zsh
+  local h=${1:-${HOST%%.*}}   # foo.example.com -> foo
+  # 先頭 N 文字だけ使う
+  print -r -- "${h[1,$HOST_COLOR_KEYLEN]}"
+}
+
+# easy FNV-1a (32bit) hash function
+_host_color_hash() {
+  emulate -L zsh
+  local s="${1:-$(_host_color_key)}"
+  local -i i c h=2166136261
+
+  for (( i = 1; i <= ${#s}; ++i )); do
+    c=$(printf '%d' "'${s[i]}")
+    (( h ^= c ))
+    (( h *= 16777619 ))
+    (( h &= 0xffffffff ))
+  done
+
+  print -r -- "$h"
+}
+
+# color enum for 256 color env
+typeset -ga HOST_COLOR_PAIRS_256=(
+  '231:17'   # white on navy
+  '230:18'   # ivory on dark blue
+  '255:19'   # bright gray on deeper blue
+  '252:20'   # gray on blue
+
+  '230:22'   # ivory on dark green
+  '223:23'   # pale peach on deep green
+  '231:24'   # white on teal
+  '189:25'   # pale blue on blue
+
+  '223:52'   # pale peach on maroon
+  '230:53'   # ivory on purple
+  '189:54'   # pale blue on violet
+  '255:55'   # bright gray on purple
+
+  '230:58'   # ivory on olive
+  '255:59'   # bright gray on muted gray-brown
+  '189:60'   # pale blue on slate purple
+
+  '231:88'   # white on dark red
+  '223:89'   # pale peach on magenta-red
+  '230:90'   # ivory on dark magenta
+  '255:94'   # bright gray on purple
+  '189:95'   # pale blue on plum
+  '231:96'   # white on plum-purple
+
+  '231:130'  # white on brown/orange
+  '254:235'  # very light gray on dark gray
+  '252:236'  # gray on dark gray
+  '250:237'  # soft gray on gray
+  '255:238'  # bright gray on lighter gray
+)
+
+# color enum for 16 color env
+typeset -ga HOST_COLOR_PAIRS_16=(
+  '15:4'   # white on blue
+  '15:2'   # white on green
+  '15:5'   # white on magenta
+  '15:1'   # white on red
+  '11:4'   # yellow on blue
+  '14:0'   # cyan on black
+  '15:8'   # white on bright black
+  '0:7'    # black on white
+)
+
+# color picker
+_host_pick_color_pair() {
+  emulate -L zsh
+  local key hash pair
+  local -i colors idx
+
+  key="${1:-$(_host_color_key)}"
+  hash=$(_host_color_hash "$key")
+
+  colors=$(tput colors 2>/dev/null)
+  [[ -z "$colors" ]] && colors=0
+
+  if (( colors >= 256 )); then
+    (( idx = (hash % ${#HOST_COLOR_PAIRS_256}) + 1 ))
+    pair="${HOST_COLOR_PAIRS_256[idx]}"
+  elif (( colors >= 8 )); then
+    (( idx = (hash % ${#HOST_COLOR_PAIRS_16}) + 1 ))
+    pair="${HOST_COLOR_PAIRS_16[idx]}"
+  else
+    pair='0:0'
+  fi
+
+  print -r -- "$pair"
+}
+
+# init procedure
+_host_apply_prompt_colors() {
+  emulate -L zsh
+  local pair="${1:-$(_host_pick_color_pair)}"
+  export MYHOSTCOLOR_FG="${pair%%:*}"
+  export MYHOSTCOLOR_BG="${pair##*:}"
+}
+
+# exec init
+_host_apply_prompt_colors
+
+# preview
+my-host-color-preview() {
+  emulate -L zsh
+  local name pair fg bg
+  name="${1:-${HOST%%.*}}"
+  pair=$(_host_pick_color_pair "$name")
+  fg="${pair%%:*}"
+  bg="${pair##*:}"
+  print -P "%K{$bg}%F{$fg} ${name}  fg=${fg} bg=${bg} %f%k"
+}
+
+# preview with multiple stuffs
+my-host-color-preview-many() {
+  emulate -L zsh
+  local n
+  for n in "$@"; do
+    host-color-preview "$n"
+  done
+}
+
+RPROMPT=[$LIGHT_GRAY%F{green}%K{black}%U%~%u%f%k]  
+PROMPT="%K{black}%n@%K{${MYHOSTCOLOR_BG}}%F{${MYHOSTCOLOR_FG}}%m%f%k %(?.$LIGHT_BLUE.$RED)%?"$'%b %F{grey}{$LANG}%f%k%F{cyan} %D{%m-%d %R(%Z)}%f $(ssh_agent_prompt)$(tmux_attachable_prompt)$(wsl_prompt)${vcs_info_msg_0_}%f%k\n$GREEN%(!.#.$) $DEFAULT'
+#}}
 
 ### VTE_CJK_WIDTH (for SSH sessions)
 VTE_CJK_WIDTH_PROFILE=/etc/profile.d/vte_cjk_width.sh
